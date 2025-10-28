@@ -30,6 +30,7 @@ DB_PASSWORD=secret
 run migrations
 ```bash
 php artisan migrate
+php artisan db:seed
 ```
 
 run frontend and backend
