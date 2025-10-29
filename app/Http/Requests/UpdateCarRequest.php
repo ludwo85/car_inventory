@@ -38,10 +38,10 @@ class UpdateCarRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'Car name is required',
-            'registration_number.required_if' => 'Registration number is required for registered cars',
-            'registration_number.max' => 'Registration number cannot exceed ' . self::REGISTRATION_NUMBER_MAX_LENGTH . ' characters',
-            'registration_number.regex' => 'Registration number must be in format AA000XX (2 letters, 3 digits, 2 letters)',
+            'name.required' => 'validation.carNameRequired',
+            'registration_number.required_if' => 'validation.registrationNumberRequired',
+            'registration_number.max' => 'validation.registrationNumberMax:' . self::REGISTRATION_NUMBER_MAX_LENGTH,
+            'registration_number.regex' => 'validation.registrationNumberFormat',
         ];
     }
 }

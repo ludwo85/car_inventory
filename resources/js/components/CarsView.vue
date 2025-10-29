@@ -1,9 +1,9 @@
 <template>
   <div>
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>Car Management</h2>
+      <h2>{{ $t('cars.title') }}</h2>
       <button class="btn btn-primary" @click="showAddModal = true">
-        Add New Car
+        {{ $t('cars.addNew') }}
       </button>
     </div>
 
@@ -13,7 +13,7 @@
         <input 
           type="text" 
           class="form-control" 
-          placeholder="Search by name or registration number..."
+          :placeholder="$t('cars.searchPlaceholder')"
           v-model="filters.search"
           @input="() => loadCars(1)"
           :maxlength="MAX_SEARCH_LENGTH"
@@ -21,9 +21,9 @@
       </div>
       <div class="col-md-3">
         <select class="form-select" v-model="filters.is_registered" @change="() => loadCars(1)">
-          <option value="">All Cars</option>
-          <option value="1">Registered</option>
-          <option value="0">Unregistered</option>
+          <option value="">{{ $t('cars.allCars') }}</option>
+          <option value="1">{{ $t('common.registered') }}</option>
+          <option value="0">{{ $t('common.unregistered') }}</option>
         </select>
       </div>
     </div>
@@ -33,11 +33,11 @@
       <table class="table table-striped">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Registration Number</th>
-            <th>Registered</th>
-            <th>Parts Count</th>
-            <th>Actions</th>
+            <th>{{ $t('cars.tableHeaders.name') }}</th>
+            <th>{{ $t('cars.tableHeaders.registrationNumber') }}</th>
+            <th>{{ $t('cars.tableHeaders.registered') }}</th>
+            <th>{{ $t('cars.tableHeaders.partsCount') }}</th>
+            <th>{{ $t('cars.tableHeaders.actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -46,16 +46,16 @@
             <td>{{ car.registration_number || '-' }}</td>
             <td>
               <span class="badge" :class="car.is_registered ? 'bg-success' : 'bg-secondary'">
-                {{ car.is_registered ? 'Yes' : 'No' }}
+                {{ car.is_registered ? $t('common.yes') : $t('common.no') }}
               </span>
             </td>
             <td>{{ car.parts.length }}</td>
             <td>
               <button class="btn btn-sm btn-outline-primary me-2" @click="editCar(car)">
-                Edit
+                {{ $t('common.edit') }}
               </button>
               <button class="btn btn-sm btn-outline-danger" @click="deleteCar(car)">
-                Delete
+                {{ $t('common.delete') }}
               </button>
             </td>
           </tr>
@@ -67,13 +67,13 @@
     <nav v-if="cars.last_page > 1">
       <ul class="pagination justify-content-center">
         <li class="page-item" :class="{ disabled: cars.current_page === 1 }">
-          <button class="page-link" @click="loadCars(cars.current_page - 1)">Previous</button>
+          <button class="page-link" @click="loadCars(cars.current_page - 1)">{{ $t('common.previous') }}</button>
         </li>
         <li class="page-item" v-for="page in getPageNumbers()" :key="page" :class="{ active: page === cars.current_page }">
           <button class="page-link" @click="loadCars(page)">{{ page }}</button>
         </li>
         <li class="page-item" :class="{ disabled: cars.current_page === cars.last_page }">
-          <button class="page-link" @click="loadCars(cars.current_page + 1)">Next</button>
+          <button class="page-link" @click="loadCars(cars.current_page + 1)">{{ $t('common.next') }}</button>
         </li>
       </ul>
     </nav>
@@ -83,13 +83,13 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">{{ editingCar ? 'Edit Car' : 'Add New Car' }}</h5>
+            <h5 class="modal-title">{{ editingCar ? $t('cars.editTitle') : $t('cars.addNew') }}</h5>
             <button type="button" class="btn-close" @click="closeModal"></button>
           </div>
           <div class="modal-body">
             <form @submit.prevent="saveCar">
               <div class="mb-3">
-                <label class="form-label">Car Name *</label>
+                <label class="form-label">{{ $t('cars.carName') }} *</label>
                 <input 
                   type="text" 
                   class="form-control" 
@@ -106,12 +106,12 @@
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox" v-model="form.is_registered" id="is_registered" @change="errors.registration_number = null">
                   <label class="form-check-label" for="is_registered">
-                    Car is registered
+                    {{ $t('cars.carIsRegistered') }}
                   </label>
                 </div>
               </div>
               <div class="mb-3" v-if="form.is_registered">
-                <label class="form-label">Registration Number *</label>
+                <label class="form-label">{{ $t('cars.registrationNumber') }} *</label>
                 <input 
                   type="text" 
                   class="form-control" 
@@ -127,8 +127,8 @@
                 </div>
               </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" @click="closeModal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+                <button type="submit" class="btn btn-primary">{{ $t('common.save') }}</button>
               </div>
             </form>
           </div>
@@ -141,14 +141,17 @@
 
 <script>
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import axios from 'axios'
+import { translateValidationErrors } from '../utils/validationTranslator'
 
 export default {
   name: 'CarsView',
   setup() {
+    const { t } = useI18n()
     const PAGINATION_RANGE = 2
     const MAX_SEARCH_LENGTH = 30
-    const MAX_STRING_VIEW_LENGTH = 50
+    const MAX_STRING_VIEW_LENGTH = 40
 
     const cars = ref({ data: [], current_page: 1, last_page: 1 })
     const showAddModal = ref(false)
@@ -221,7 +224,7 @@ export default {
         console.error('Error saving car:', error)
         
         if (error.response && error.response.status === 422 && error.response.data.errors) {
-          const validationErrors = error.response.data.errors
+          const validationErrors = translateValidationErrors(error.response.data.errors, t)
           if (validationErrors.name) {
             errors.name = validationErrors.name
           }
@@ -235,7 +238,7 @@ export default {
     }
 
     const deleteCar = async (car) => {
-      if (confirm(`Are you sure you want to delete car "${car.name}"?`)) {
+      if (confirm(t('cars.deleteConfirm', { name: car.name }))) {
         try {
           await axios.delete(`/api/cars/${car.id}`)
           loadCars(cars.value.current_page)

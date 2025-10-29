@@ -1,9 +1,9 @@
 <template>
   <div>
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>Parts Management</h2>
+      <h2>{{ $t('parts.title') }}</h2>
       <button class="btn btn-primary" @click="showAddModal = true">
-        Add New Part
+        {{ $t('parts.addNew') }}
       </button>
     </div>
 
@@ -13,7 +13,7 @@
         <input 
           type="text" 
           class="form-control" 
-          placeholder="Search by name, serial number or car..."
+          :placeholder="$t('parts.searchPlaceholder')"
           v-model="filters.search"
           @input="loadParts"
           :maxlength="MAX_SEARCH_LENGTH"
@@ -21,7 +21,7 @@
       </div>
       <div class="col-md-3">
         <select class="form-select" v-model="filters.car_id" @change="loadParts">
-          <option value="">All Cars</option>
+          <option value="">{{ $t('parts.allCars') }}</option>
           <option v-for="car in allCars" :key="car.id" :value="car.id" :title="car.name">
             {{ truncateText(car.name) }}
           </option>
@@ -34,10 +34,10 @@
       <table class="table table-striped">
         <thead>
           <tr>
-            <th>Part Name</th>
-            <th>Serial Number</th>
-            <th>Car</th>
-            <th>Actions</th>
+            <th>{{ $t('parts.tableHeaders.partName') }}</th>
+            <th>{{ $t('parts.tableHeaders.serialNumber') }}</th>
+            <th>{{ $t('parts.tableHeaders.car') }}</th>
+            <th>{{ $t('parts.tableHeaders.actions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -47,10 +47,10 @@
             <td :title="part.car?.name">{{ truncateText(part.car?.name) }}</td>
             <td>
               <button class="btn btn-sm btn-outline-primary me-2" @click="editPart(part)">
-                Edit
+                {{ $t('common.edit') }}
               </button>
               <button class="btn btn-sm btn-outline-danger" @click="deletePart(part)">
-                Delete
+                {{ $t('common.delete') }}
               </button>
             </td>
           </tr>
@@ -62,13 +62,13 @@
     <nav v-if="parts.last_page > 1">
       <ul class="pagination justify-content-center">
         <li class="page-item" :class="{ disabled: parts.current_page === 1 }">
-          <button class="page-link" @click="loadParts(parts.current_page - 1)">Previous</button>
+          <button class="page-link" @click="loadParts(parts.current_page - 1)">{{ $t('common.previous') }}</button>
         </li>
         <li class="page-item" v-for="page in getPageNumbers()" :key="page" :class="{ active: page === parts.current_page }">
           <button class="page-link" @click="loadParts(page)">{{ page }}</button>
         </li>
         <li class="page-item" :class="{ disabled: parts.current_page === parts.last_page }">
-          <button class="page-link" @click="loadParts(parts.current_page + 1)">Next</button>
+          <button class="page-link" @click="loadParts(parts.current_page + 1)">{{ $t('common.next') }}</button>
         </li>
       </ul>
     </nav>
@@ -78,13 +78,13 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">{{ editingPart ? 'Edit Part' : 'Add New Part' }}</h5>
+            <h5 class="modal-title">{{ editingPart ? $t('parts.editTitle') : $t('parts.addNew') }}</h5>
             <button type="button" class="btn-close" @click="closeModal"></button>
           </div>
           <div class="modal-body">
             <form @submit.prevent="savePart">
               <div class="mb-3">
-                <label class="form-label">Part Name *</label>
+                <label class="form-label">{{ $t('parts.partName') }} *</label>
                 <input 
                   type="text" 
                   class="form-control" 
@@ -98,7 +98,7 @@
                 </div>
               </div>
               <div class="mb-3">
-                <label class="form-label">Serial Number *</label>
+                <label class="form-label">{{ $t('parts.serialNumber') }} *</label>
                 <input 
                   type="text" 
                   class="form-control" 
@@ -112,7 +112,7 @@
                 </div>
               </div>
               <div class="mb-3">
-                <label class="form-label">Car *</label>
+                <label class="form-label">{{ $t('parts.car') }} *</label>
                 <select 
                   class="form-select" 
                   :class="{ 'is-invalid': errors.car_id }"
@@ -120,7 +120,7 @@
                   @change="errors.car_id = null"
                   required
                 >
-                  <option value="">Select Car</option>
+                  <option value="">{{ $t('parts.selectCar') }}</option>
                   <option v-for="car in allCars" :key="car.id" :value="car.id" :title="car.name">
                     {{ truncateText(car.name) }}
                   </option>
@@ -130,8 +130,8 @@
                 </div>
               </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" @click="closeModal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-secondary" @click="closeModal">{{ $t('common.cancel') }}</button>
+                <button type="submit" class="btn btn-primary">{{ $t('common.save') }}</button>
               </div>
             </form>
           </div>
@@ -144,14 +144,17 @@
 
 <script>
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import axios from 'axios'
+import { translateValidationErrors } from '../utils/validationTranslator'
 
 export default {
   name: 'PartsView',
   setup() {
+    const { t } = useI18n()
     const PAGINATION_RANGE = 2
     const MAX_SEARCH_LENGTH = 30
-    const MAX_STRING_VIEW_LENGTH = 50
+    const MAX_STRING_VIEW_LENGTH = 40
 
     const parts = ref({ data: [], current_page: 1, last_page: 1 })
     const allCars = ref([])
@@ -233,7 +236,7 @@ export default {
         console.error('Error saving part:', error)
         
         if (error.response && error.response.status === 422 && error.response.data.errors) {
-          const validationErrors = error.response.data.errors
+          const validationErrors = translateValidationErrors(error.response.data.errors, t)
           if (validationErrors.name) {
             errors.name = validationErrors.name
           }
@@ -250,7 +253,7 @@ export default {
     }
 
     const deletePart = async (part) => {
-      if (confirm(`Are you sure you want to delete part "${part.name}"?`)) {
+      if (confirm(t('parts.deleteConfirm', { name: part.name }))) {
         try {
           await axios.delete(`/api/parts/${part.id}`)
           loadParts(parts.value.current_page)

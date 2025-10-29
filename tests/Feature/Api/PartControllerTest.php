@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Http\Controllers\Api\PartController;
 use App\Models\Car;
 use App\Models\Part;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -216,7 +217,7 @@ class PartControllerTest extends TestCase
             ->assertJson([
                 'errors' => [
                     'name' => [
-                        'Part name cannot exceed 255 characters',
+                        'validation.partNameMax:255',
                     ],
                 ],
             ]);
@@ -238,7 +239,7 @@ class PartControllerTest extends TestCase
             ->assertJson([
                 'errors' => [
                     'serialnumber' => [
-                        'Serial number cannot exceed 255 characters',
+                        'validation.serialNumberMax:255',
                     ],
                 ],
             ]);
@@ -281,7 +282,7 @@ class PartControllerTest extends TestCase
             ->assertJson([
                 'errors' => [
                     'name' => [
-                        'Part name cannot exceed 255 characters',
+                        'validation.partNameMax:255',
                     ],
                 ],
             ]);
@@ -308,7 +309,7 @@ class PartControllerTest extends TestCase
             ->assertJson([
                 'errors' => [
                     'serialnumber' => [
-                        'Serial number cannot exceed 255 characters',
+                        'validation.serialNumberMax:255',
                     ],
                 ],
             ]);
@@ -443,14 +444,14 @@ class PartControllerTest extends TestCase
     {
         /** @var Car $car */
         $car = Car::factory()->create();
-        Part::factory()->count(15)->create(['car_id' => $car->id]);
+        Part::factory()->count(PartController::ITEMS_PER_PAGE + 5)->create(['car_id' => $car->id]);
 
         $response = $this->getJson('/api/parts');
 
         $response->assertStatus(200);
         $data = $response->json('data');
         assert(is_array($data));
-        $this->assertCount(10, $data);
+        $this->assertCount(PartController::ITEMS_PER_PAGE, $data);
         $this->assertEquals(2, $response->json('last_page'));
     }
 }

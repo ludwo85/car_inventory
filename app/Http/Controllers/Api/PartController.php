@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 
 class PartController extends Controller
 {
-    private const ITEMS_PER_PAGE = 10;
+    public const ITEMS_PER_PAGE = 15;
 
     public function index(Request $request): JsonResponse
     {

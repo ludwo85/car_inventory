@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Http\Controllers\Api\CarController;
 use App\Models\Car;
 use App\Models\Part;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -165,7 +166,7 @@ class CarControllerTest extends TestCase
 
         $errors = $response->json('errors.registration_number');
         assert(is_array($errors));
-        $this->assertContains('Registration number must be in format AA000XX (2 letters, 3 digits, 2 letters)', $errors);
+        $this->assertContains('validation.registrationNumberFormat', $errors);
     }
 
     public function test_cannot_create_car_with_registration_number_too_long(): void
@@ -205,7 +206,7 @@ class CarControllerTest extends TestCase
 
         $errors = $response->json('errors.registration_number');
         assert(is_array($errors));
-        $this->assertContains('Registration number must be in format AA000XX (2 letters, 3 digits, 2 letters)', $errors);
+        $this->assertContains('validation.registrationNumberFormat', $errors);
     }
 
     public function test_can_create_car_with_valid_registration_number_format(): void
@@ -242,7 +243,7 @@ class CarControllerTest extends TestCase
 
         $errors = $response->json('errors.registration_number');
         assert(is_array($errors));
-        $this->assertContains('Registration number must be in format AA000XX (2 letters, 3 digits, 2 letters)', $errors);
+        $this->assertContains('validation.registrationNumberFormat', $errors);
     }
 
     public function test_cannot_update_car_with_registration_number_too_long(): void
@@ -378,7 +379,7 @@ class CarControllerTest extends TestCase
 
     public function test_pagination_works_correctly(): void
     {
-        Car::factory()->count(15)->create();
+        Car::factory()->count(CarController::ITEMS_PER_PAGE + 5)->create();
 
         $response = $this->getJson('/api/cars');
 
@@ -393,7 +394,7 @@ class CarControllerTest extends TestCase
 
         $data = $response->json('data');
         assert(is_array($data));
-        $this->assertCount(10, $data);
+        $this->assertCount(CarController::ITEMS_PER_PAGE, $data);
         $this->assertEquals(2, $response->json('last_page'));
     }
 }

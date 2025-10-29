@@ -31,12 +31,12 @@ class UpdatePartRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'Part name is required',
-            'name.max' => 'Part name cannot exceed ' . self::MAX_STRING_LENGTH . ' characters',
-            'serialnumber.required' => 'Serial number is required',
-            'serialnumber.max' => 'Serial number cannot exceed ' . self::MAX_STRING_LENGTH . ' characters',
-            'car_id.required' => 'Car is required',
-            'car_id.exists' => 'Selected car does not exist',
+            'name.required' => 'validation.partNameRequired',
+            'name.max' => 'validation.partNameMax:' . self::MAX_STRING_LENGTH,
+            'serialnumber.required' => 'validation.serialNumberRequired',
+            'serialnumber.max' => 'validation.serialNumberMax:' . self::MAX_STRING_LENGTH,
+            'car_id.required' => 'validation.carRequired',
+            'car_id.exists' => 'validation.carNotExists',
         ];
     }
 }
