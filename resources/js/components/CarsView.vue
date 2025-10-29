@@ -16,6 +16,7 @@
           placeholder="Search by name or registration number..."
           v-model="filters.search"
           @input="() => loadCars(1)"
+          :maxlength="MAX_SEARCH_LENGTH"
         >
       </div>
       <div class="col-md-3">
@@ -41,7 +42,7 @@
         </thead>
         <tbody>
           <tr v-for="car in cars.data" :key="car.id">
-            <td>{{ car.name }}</td>
+            <td :title="car.name">{{ truncateText(car.name) }}</td>
             <td>{{ car.registration_number || '-' }}</td>
             <td>
               <span class="badge" :class="car.is_registered ? 'bg-success' : 'bg-secondary'">
@@ -89,11 +90,21 @@
             <form @submit.prevent="saveCar">
               <div class="mb-3">
                 <label class="form-label">Car Name *</label>
-                <input type="text" class="form-control" v-model="form.name" required>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  :class="{ 'is-invalid': errors.name }"
+                  v-model="form.name" 
+                  @input="errors.name = null"
+                  required
+                >
+                <div v-if="errors.name" class="invalid-feedback">
+                  {{ errors.name[0] }}
+                </div>
               </div>
               <div class="mb-3">
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox" v-model="form.is_registered" id="is_registered">
+                  <input class="form-check-input" type="checkbox" v-model="form.is_registered" id="is_registered" @change="errors.registration_number = null">
                   <label class="form-check-label" for="is_registered">
                     Car is registered
                   </label>
@@ -101,7 +112,19 @@
               </div>
               <div class="mb-3" v-if="form.is_registered">
                 <label class="form-label">Registration Number *</label>
-                <input type="text" class="form-control" v-model="form.registration_number" required>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  :class="{ 'is-invalid': errors.registration_number }"
+                  v-model="form.registration_number" 
+                  @input="form.registration_number = form.registration_number.toUpperCase(); errors.registration_number = null"
+                  required
+                  maxlength="7"
+                  placeholder="AA000XX"
+                >
+                <div v-if="errors.registration_number" class="invalid-feedback">
+                  {{ errors.registration_number[0] }}
+                </div>
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" @click="closeModal">Cancel</button>
@@ -124,6 +147,8 @@ export default {
   name: 'CarsView',
   setup() {
     const PAGINATION_RANGE = 2
+    const MAX_SEARCH_LENGTH = 30
+    const MAX_STRING_VIEW_LENGTH = 50
 
     const cars = ref({ data: [], current_page: 1, last_page: 1 })
     const showAddModal = ref(false)
@@ -141,13 +166,17 @@ export default {
       is_registered: false
     })
 
+    const errors = reactive({
+      name: null,
+      registration_number: null
+    })
+
     const loadCars = async (page = 1) => {
       try {
         const params = new URLSearchParams({
           page: page.toString()
         })
         
-        // Add filters only if they have values
         if (filters.search) {
           params.append('search', filters.search)
         }
@@ -172,6 +201,13 @@ export default {
     }
 
     const saveCar = async () => {
+      errors.name = null
+      errors.registration_number = null
+
+      if (!form.is_registered) {
+        form.registration_number = ''
+      }
+
       try {
         if (editingCar.value) {
           await axios.put(`/api/cars/${editingCar.value.id}`, form)
@@ -183,7 +219,18 @@ export default {
         loadCars(cars.value.current_page)
       } catch (error) {
         console.error('Error saving car:', error)
-        alert('Error saving car')
+        
+        if (error.response && error.response.status === 422 && error.response.data.errors) {
+          const validationErrors = error.response.data.errors
+          if (validationErrors.name) {
+            errors.name = validationErrors.name
+          }
+          if (validationErrors.registration_number) {
+            errors.registration_number = validationErrors.registration_number
+          }
+        } else {
+          alert('Error saving car')
+        }
       }
     }
 
@@ -206,6 +253,13 @@ export default {
       form.name = ''
       form.registration_number = ''
       form.is_registered = false
+      errors.name = null
+      errors.registration_number = null
+    }
+
+    const truncateText = (text) => {
+      if (!text) return '-'
+      return text.length > MAX_STRING_VIEW_LENGTH ? text.substring(0, MAX_STRING_VIEW_LENGTH) + '...' : text
     }
 
     const getPageNumbers = () => {
@@ -231,12 +285,15 @@ export default {
       editingCar,
       filters,
       form,
+      errors,
       loadCars,
       editCar,
       saveCar,
       deleteCar,
       closeModal,
-      getPageNumbers
+      getPageNumbers,
+      truncateText,
+      MAX_SEARCH_LENGTH
     }
   }
 }

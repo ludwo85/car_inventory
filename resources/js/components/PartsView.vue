@@ -16,13 +16,14 @@
           placeholder="Search by name, serial number or car..."
           v-model="filters.search"
           @input="loadParts"
+          :maxlength="MAX_SEARCH_LENGTH"
         >
       </div>
       <div class="col-md-3">
         <select class="form-select" v-model="filters.car_id" @change="loadParts">
           <option value="">All Cars</option>
-          <option v-for="car in allCars" :key="car.id" :value="car.id">
-            {{ car.name }}
+          <option v-for="car in allCars" :key="car.id" :value="car.id" :title="car.name">
+            {{ truncateText(car.name) }}
           </option>
         </select>
       </div>
@@ -41,9 +42,9 @@
         </thead>
         <tbody>
           <tr v-for="part in parts.data" :key="part.id">
-            <td>{{ part.name }}</td>
-            <td>{{ part.serialnumber }}</td>
-            <td>{{ part.car.name }}</td>
+            <td :title="part.name">{{ truncateText(part.name) }}</td>
+            <td :title="part.serialnumber">{{ truncateText(part.serialnumber) }}</td>
+            <td :title="part.car?.name">{{ truncateText(part.car?.name) }}</td>
             <td>
               <button class="btn btn-sm btn-outline-primary me-2" @click="editPart(part)">
                 Edit
@@ -84,20 +85,49 @@
             <form @submit.prevent="savePart">
               <div class="mb-3">
                 <label class="form-label">Part Name *</label>
-                <input type="text" class="form-control" v-model="form.name" required>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  :class="{ 'is-invalid': errors.name }"
+                  v-model="form.name" 
+                  @input="errors.name = null"
+                  required
+                >
+                <div v-if="errors.name" class="invalid-feedback">
+                  {{ errors.name[0] }}
+                </div>
               </div>
               <div class="mb-3">
                 <label class="form-label">Serial Number *</label>
-                <input type="text" class="form-control" v-model="form.serialnumber" required>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  :class="{ 'is-invalid': errors.serialnumber }"
+                  v-model="form.serialnumber" 
+                  @input="errors.serialnumber = null"
+                  required
+                >
+                <div v-if="errors.serialnumber" class="invalid-feedback">
+                  {{ errors.serialnumber[0] }}
+                </div>
               </div>
               <div class="mb-3">
                 <label class="form-label">Car *</label>
-                <select class="form-select" v-model="form.car_id" required>
+                <select 
+                  class="form-select" 
+                  :class="{ 'is-invalid': errors.car_id }"
+                  v-model="form.car_id" 
+                  @change="errors.car_id = null"
+                  required
+                >
                   <option value="">Select Car</option>
-                  <option v-for="car in allCars" :key="car.id" :value="car.id">
-                    {{ car.name }}
+                  <option v-for="car in allCars" :key="car.id" :value="car.id" :title="car.name">
+                    {{ truncateText(car.name) }}
                   </option>
                 </select>
+                <div v-if="errors.car_id" class="invalid-feedback">
+                  {{ errors.car_id[0] }}
+                </div>
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" @click="closeModal">Cancel</button>
@@ -120,6 +150,8 @@ export default {
   name: 'PartsView',
   setup() {
     const PAGINATION_RANGE = 2
+    const MAX_SEARCH_LENGTH = 30
+    const MAX_STRING_VIEW_LENGTH = 50
 
     const parts = ref({ data: [], current_page: 1, last_page: 1 })
     const allCars = ref([])
@@ -136,6 +168,12 @@ export default {
       name: '',
       serialnumber: '',
       car_id: ''
+    })
+
+    const errors = reactive({
+      name: null,
+      serialnumber: null,
+      car_id: null
     })
 
     const loadParts = async (page = 1) => {
@@ -178,6 +216,10 @@ export default {
     }
 
     const savePart = async () => {
+      errors.name = null
+      errors.serialnumber = null
+      errors.car_id = null
+
       try {
         if (editingPart.value) {
           await axios.put(`/api/parts/${editingPart.value.id}`, form)
@@ -189,7 +231,21 @@ export default {
         loadParts(parts.value.current_page)
       } catch (error) {
         console.error('Error saving part:', error)
-        alert('Error saving part')
+        
+        if (error.response && error.response.status === 422 && error.response.data.errors) {
+          const validationErrors = error.response.data.errors
+          if (validationErrors.name) {
+            errors.name = validationErrors.name
+          }
+          if (validationErrors.serialnumber) {
+            errors.serialnumber = validationErrors.serialnumber
+          }
+          if (validationErrors.car_id) {
+            errors.car_id = validationErrors.car_id
+          }
+        } else {
+          alert('Error saving part')
+        }
       }
     }
 
@@ -212,6 +268,14 @@ export default {
       form.name = ''
       form.serialnumber = ''
       form.car_id = ''
+      errors.name = null
+      errors.serialnumber = null
+      errors.car_id = null
+    }
+
+    const truncateText = (text) => {
+      if (!text) return '-'
+      return text.length > MAX_STRING_VIEW_LENGTH ? text.substring(0, MAX_STRING_VIEW_LENGTH) + '...' : text
     }
 
     const getPageNumbers = () => {
@@ -239,13 +303,16 @@ export default {
       editingPart,
       filters,
       form,
+      errors,
       loadParts,
       loadCars,
       editPart,
       savePart,
       deletePart,
       closeModal,
-      getPageNumbers
+      getPageNumbers,
+      truncateText,
+      MAX_SEARCH_LENGTH
     }
   }
 }
