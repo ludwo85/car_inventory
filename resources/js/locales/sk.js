@@ -1,4 +1,27 @@
 export default {
+  messages: {
+    success: {
+      carCreated: 'Auto bolo úspešne vytvorené',
+      carUpdated: 'Auto bolo úspešne aktualizované',
+      carDeleted: 'Auto bolo úspešne zmazané',
+      partCreated: 'Diel bol úspešne vytvorený',
+      partUpdated: 'Diel bol úspešne aktualizovaný',
+      partDeleted: 'Diel bol úspešne zmazaný',
+    },
+    error: {
+      retrieveCars: 'Zlyhalo načítanie áut. Skúste to znova neskôr.',
+      retrieveCar: 'Zlyhalo načítanie auta. Skúste to znova neskôr.',
+      createCar: 'Zlyhalo vytvorenie auta. Skúste to znova neskôr.',
+      updateCar: 'Zlyhalo aktualizovanie auta. Skúste to znova neskôr.',
+      deleteCar: 'Zlyhalo zmazanie auta. Skúste to znova neskôr.',
+      retrieveParts: 'Zlyhalo načítanie dielov. Skúste to znova neskôr.',
+      retrievePart: 'Zlyhalo načítanie dielu. Skúste to znova neskôr.',
+      createPart: 'Zlyhalo vytvorenie dielu. Skúste to znova neskôr.',
+      updatePart: 'Zlyhalo aktualizovanie dielu. Skúste to znova neskôr.',
+      deletePart: 'Zlyhalo zmazanie dielu. Skúste to znova neskôr.',
+      network: 'Chyba siete. Skúste to znova neskôr.',
+    },
+  },
   common: {
     add: 'Pridať',
     edit: 'Upraviť',

@@ -13,6 +13,10 @@ return new class () extends Migration {
             $table->string('serialnumber');
             $table->foreignId('car_id')->constrained()->onDelete('cascade');
             $table->timestamps();
+
+            $table->index('car_id', 'parts_car_id_index');
+            $table->index('name', 'parts_name_index');
+            $table->index('serialnumber', 'parts_serialnumber_index');
         });
     }
 

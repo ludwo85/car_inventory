@@ -1,4 +1,27 @@
 export default {
+  messages: {
+    success: {
+      carCreated: 'Car successfully created',
+      carUpdated: 'Car successfully updated',
+      carDeleted: 'Car successfully deleted',
+      partCreated: 'Part successfully created',
+      partUpdated: 'Part successfully updated',
+      partDeleted: 'Part successfully deleted',
+    },
+    error: {
+      retrieveCars: 'Failed to retrieve cars. Please try again later.',
+      retrieveCar: 'Failed to retrieve car. Please try again later.',
+      createCar: 'Failed to create car. Please try again later.',
+      updateCar: 'Failed to update car. Please try again later.',
+      deleteCar: 'Failed to delete car. Please try again later.',
+      retrieveParts: 'Failed to retrieve parts. Please try again later.',
+      retrievePart: 'Failed to retrieve part. Please try again later.',
+      createPart: 'Failed to create part. Please try again later.',
+      updatePart: 'Failed to update part. Please try again later.',
+      deletePart: 'Failed to delete part. Please try again later.',
+      network: 'Network error. Please try again later.',
+    },
+  },
   common: {
     add: 'Add',
     edit: 'Edit',

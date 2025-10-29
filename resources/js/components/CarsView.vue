@@ -1,5 +1,6 @@
 <template>
   <div>
+
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h2>{{ $t('cars.title') }}</h2>
       <button class="btn btn-primary" @click="showAddModal = true">
@@ -33,10 +34,26 @@
       <table class="table table-striped">
         <thead>
           <tr>
-            <th>{{ $t('cars.tableHeaders.name') }}</th>
-            <th>{{ $t('cars.tableHeaders.registrationNumber') }}</th>
-            <th>{{ $t('cars.tableHeaders.registered') }}</th>
-            <th>{{ $t('cars.tableHeaders.partsCount') }}</th>
+            <th @click="sortBy('name')" class="sortable" :class="{ 'sorted': sorting.sortBy === 'name' }">
+              {{ $t('cars.tableHeaders.name') }}
+              <i v-if="sorting.sortBy === 'name'" :class="sorting.sortDirection === 'asc' ? 'fa fa-sort-up' : 'fa fa-sort-down'"></i>
+              <i v-else class="fa fa-sort text-muted"></i>
+            </th>
+            <th @click="sortBy('registration_number')" class="sortable" :class="{ 'sorted': sorting.sortBy === 'registration_number' }">
+              {{ $t('cars.tableHeaders.registrationNumber') }}
+              <i v-if="sorting.sortBy === 'registration_number'" :class="sorting.sortDirection === 'asc' ? 'fa fa-sort-up' : 'fa fa-sort-down'"></i>
+              <i v-else class="fa fa-sort text-muted"></i>
+            </th>
+            <th @click="sortBy('is_registered')" class="sortable" :class="{ 'sorted': sorting.sortBy === 'is_registered' }">
+              {{ $t('cars.tableHeaders.registered') }}
+              <i v-if="sorting.sortBy === 'is_registered'" :class="sorting.sortDirection === 'asc' ? 'fa fa-sort-up' : 'fa fa-sort-down'"></i>
+              <i v-else class="fa fa-sort text-muted"></i>
+            </th>
+            <th @click="sortBy('parts_count')" class="sortable" :class="{ 'sorted': sorting.sortBy === 'parts_count' }">
+              {{ $t('cars.tableHeaders.partsCount') }}
+              <i v-if="sorting.sortBy === 'parts_count'" :class="sorting.sortDirection === 'asc' ? 'fa fa-sort-up' : 'fa fa-sort-down'"></i>
+              <i v-else class="fa fa-sort text-muted"></i>
+            </th>
             <th>{{ $t('cars.tableHeaders.actions') }}</th>
           </tr>
         </thead>
@@ -49,7 +66,7 @@
                 {{ car.is_registered ? $t('common.yes') : $t('common.no') }}
               </span>
             </td>
-            <td>{{ car.parts.length }}</td>
+            <td>{{ car.parts_count || (car.parts ? car.parts.length : 0) }}</td>
             <td>
               <button class="btn btn-sm btn-outline-primary me-2" @click="editCar(car)">
                 {{ $t('common.edit') }}
@@ -144,14 +161,12 @@ import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import { translateValidationErrors } from '../utils/validationTranslator'
+import { MAX_SEARCH_LENGTH, MAX_STRING_VIEW_LENGTH, PAGINATION_RANGE, MESSAGE_DISPLAY_DURATION } from '../constants'
 
 export default {
   name: 'CarsView',
   setup() {
     const { t } = useI18n()
-    const PAGINATION_RANGE = 2
-    const MAX_SEARCH_LENGTH = 30
-    const MAX_STRING_VIEW_LENGTH = 40
 
     const cars = ref({ data: [], current_page: 1, last_page: 1 })
     const showAddModal = ref(false)
@@ -161,6 +176,11 @@ export default {
     const filters = reactive({
       search: '',
       is_registered: ''
+    })
+
+    const sorting = reactive({
+      sortBy: 'name',
+      sortDirection: 'asc'
     })
 
     const form = reactive({
@@ -173,6 +193,17 @@ export default {
       name: null,
       registration_number: null
     })
+
+    const showMessage = (text, type = 'error') => {
+      if (window.showGlobalMessage) {
+        window.showGlobalMessage(text, type)
+        setTimeout(() => {
+          if (window.showGlobalMessage) {
+            window.showGlobalMessage('', '')
+          }
+        }, MESSAGE_DISPLAY_DURATION)
+      }
+    }
 
     const loadCars = async (page = 1) => {
       try {
@@ -187,11 +218,21 @@ export default {
           params.append('is_registered', filters.is_registered)
         }
         
+        params.append('sort_by', sorting.sortBy)
+        params.append('sort_direction', sorting.sortDirection)
+        
         const response = await axios.get(`/api/cars?${params}`)
-        cars.value = response.data
+        if (response.data.error) {
+          const key = response.data.message || 'messages.error.retrieveCars'
+          showMessage(t(key), 'error')
+          cars.value = { data: [], current_page: 1, last_page: 1 }
+        } else {
+          cars.value = response.data
+        }
       } catch (error) {
         console.error('Error loading cars:', error)
-        alert('Error loading cars')
+        const key = error.response?.data?.message || 'messages.error.network'
+        showMessage(t(key), 'error')
       }
     }
 
@@ -212,10 +253,12 @@ export default {
       }
 
       try {
-        if (editingCar.value) {
-          await axios.put(`/api/cars/${editingCar.value.id}`, form)
-        } else {
-          await axios.post('/api/cars', form)
+        const response = editingCar.value
+          ? await axios.put(`/api/cars/${editingCar.value.id}`, form)
+          : await axios.post('/api/cars', form)
+        
+        if (response.data.success && response.data.message) {
+          showMessage(t(response.data.message), 'success')
         }
         
         closeModal()
@@ -232,7 +275,8 @@ export default {
             errors.registration_number = validationErrors.registration_number
           }
         } else {
-          alert('Error saving car')
+          const key = error.response?.data?.message || 'messages.error.network'
+          showMessage(t(key), 'error')
         }
       }
     }
@@ -240,11 +284,15 @@ export default {
     const deleteCar = async (car) => {
       if (confirm(t('cars.deleteConfirm', { name: car.name }))) {
         try {
-          await axios.delete(`/api/cars/${car.id}`)
+          const response = await axios.delete(`/api/cars/${car.id}`)
+          if (response.data.success && response.data.message) {
+            showMessage(t(response.data.message), 'success')
+          }
           loadCars(cars.value.current_page)
         } catch (error) {
           console.error('Error deleting car:', error)
-          alert('Error deleting car')
+          const key = error.response?.data?.message || 'messages.error.network'
+          showMessage(t(key), 'error')
         }
       }
     }
@@ -277,6 +325,16 @@ export default {
       return pages
     }
 
+    const sortBy = (field) => {
+      if (sorting.sortBy === field) {
+        sorting.sortDirection = sorting.sortDirection === 'asc' ? 'desc' : 'asc'
+      } else {
+        sorting.sortBy = field
+        sorting.sortDirection = 'asc'
+      }
+      loadCars(1)
+    }
+
     onMounted(() => {
       loadCars()
     })
@@ -287,6 +345,7 @@ export default {
       showEditModal,
       editingCar,
       filters,
+      sorting,
       form,
       errors,
       loadCars,
@@ -296,6 +355,7 @@ export default {
       closeModal,
       getPageNumbers,
       truncateText,
+      sortBy,
       MAX_SEARCH_LENGTH
     }
   }

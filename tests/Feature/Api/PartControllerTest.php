@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\PartController;
 use App\Models\Car;
 use App\Models\Part;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
 class PartControllerTest extends TestCase
@@ -20,7 +21,7 @@ class PartControllerTest extends TestCase
 
         $response = $this->getJson('/api/parts');
 
-        $response->assertStatus(200)
+        $response->assertStatus(Response::HTTP_OK)
             ->assertJsonStructure([
                 'data' => [
                     '*' => ['id', 'name', 'serialnumber', 'car'],
@@ -49,7 +50,7 @@ class PartControllerTest extends TestCase
 
         $response = $this->getJson('/api/parts?search=Engine');
 
-        $response->assertStatus(200);
+        $response->assertStatus(Response::HTTP_OK);
         $data = $response->json('data');
         assert(is_array($data));
         $this->assertCount(1, $data);
@@ -73,7 +74,7 @@ class PartControllerTest extends TestCase
 
         $response = $this->getJson('/api/parts?search=ABC');
 
-        $response->assertStatus(200);
+        $response->assertStatus(Response::HTTP_OK);
         $data = $response->json('data');
         assert(is_array($data));
         $this->assertCount(1, $data);
@@ -94,7 +95,7 @@ class PartControllerTest extends TestCase
 
         $response = $this->getJson("/api/parts?car_id={$car1->id}");
 
-        $response->assertStatus(200);
+        $response->assertStatus(Response::HTTP_OK);
         $data = $response->json('data');
         assert(is_array($data));
         $this->assertCount(2, $data);
@@ -117,7 +118,7 @@ class PartControllerTest extends TestCase
 
         $response = $this->getJson('/api/parts?search=Toyota');
 
-        $response->assertStatus(200);
+        $response->assertStatus(Response::HTTP_OK);
         $data = $response->json('data');
         assert(is_array($data));
         $this->assertCount(1, $data);
@@ -142,10 +143,14 @@ class PartControllerTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJson([
-                'name' => 'New Part',
-                'serialnumber' => 'SER123',
+                'success' => true,
+                'message' => 'messages.success.partCreated',
+                'data' => [
+                    'name' => 'New Part',
+                    'serialnumber' => 'SER123',
+                ],
             ])
-            ->assertJsonStructure(['car']);
+            ->assertJsonStructure(['data' => ['car']]);
 
         $this->assertDatabaseHas('parts', $partData);
     }
@@ -328,7 +333,7 @@ class PartControllerTest extends TestCase
             'car_id' => $car->id,
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(Response::HTTP_OK);
         $this->assertDatabaseHas('parts', [
             'id' => $part->id,
             'name' => str_repeat('d', 255),
@@ -345,16 +350,20 @@ class PartControllerTest extends TestCase
 
         $response = $this->getJson("/api/parts/{$part->id}");
 
-        $response->assertStatus(200)
+        $response->assertStatus(Response::HTTP_OK)
             ->assertJson([
-                'id' => $part->id,
-                'name' => $part->name,
+                'data' => [
+                    'id' => $part->id,
+                    'name' => $part->name,
+                ],
             ])
             ->assertJsonStructure([
-                'car' => ['id', 'name'],
+                'data' => [
+                    'car' => ['id', 'name'],
+                ],
             ]);
 
-        $this->assertEquals($car->id, $response->json('car.id'));
+        $this->assertEquals($car->id, $response->json('data.car.id'));
     }
 
     public function test_can_update_part(): void
@@ -373,9 +382,13 @@ class PartControllerTest extends TestCase
             'car_id' => $car->id,
         ]);
 
-        $response->assertStatus(200)
+        $response->assertStatus(Response::HTTP_OK)
             ->assertJson([
-                'name' => 'Updated Part',
+                'success' => true,
+                'message' => 'messages.success.partUpdated',
+                'data' => [
+                    'name' => 'Updated Part',
+                ],
             ]);
 
         $this->assertDatabaseHas('parts', [
@@ -399,9 +412,11 @@ class PartControllerTest extends TestCase
             'car_id' => $car2->id,
         ]);
 
-        $response->assertStatus(200)
+        $response->assertStatus(Response::HTTP_OK)
             ->assertJson([
-                'car' => ['id' => $car2->id],
+                'data' => [
+                    'car' => ['id' => $car2->id],
+                ],
             ]);
 
         $this->assertDatabaseHas('parts', [
@@ -419,9 +434,10 @@ class PartControllerTest extends TestCase
 
         $response = $this->deleteJson("/api/parts/{$part->id}");
 
-        $response->assertStatus(200)
+        $response->assertStatus(Response::HTTP_OK)
             ->assertJson([
-                'message' => __('Part successfully deleted'),
+                'success' => true,
+                'message' => 'messages.success.partDeleted',
             ]);
 
         $this->assertDatabaseMissing('parts', ['id' => $part->id]);
@@ -448,7 +464,7 @@ class PartControllerTest extends TestCase
 
         $response = $this->getJson('/api/parts');
 
-        $response->assertStatus(200);
+        $response->assertStatus(Response::HTTP_OK);
         $data = $response->json('data');
         assert(is_array($data));
         $this->assertCount(PartController::ITEMS_PER_PAGE, $data);

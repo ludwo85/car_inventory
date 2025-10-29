@@ -29,6 +29,25 @@
       <CarsView v-if="currentView === 'cars'" />
       <PartsView v-if="currentView === 'parts'" />
     </div>
+
+    <!-- Global Message Display - Bottom Left -->
+    <div v-if="globalMessage.text" 
+         class="position-fixed bottom-0 start-0 m-3" 
+         style="z-index: 1050; max-width: 400px;">
+      <div class="alert shadow-sm" 
+           :class="globalMessage.type === 'success' ? 'alert-success' : 'alert-danger'" 
+           role="alert">
+        <div class="d-flex align-items-center">
+          <div class="flex-grow-1">
+            {{ globalMessage.text }}
+          </div>
+          <button type="button" 
+                  class="btn-close ms-2" 
+                  @click="clearGlobalMessage" 
+                  aria-label="Close"></button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -37,6 +56,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import CarsView from './components/CarsView.vue'
 import PartsView from './components/PartsView.vue'
+import { MESSAGE_DISPLAY_DURATION } from './constants'
 
 export default {
   name: 'App',
@@ -47,6 +67,7 @@ export default {
   setup() {
     const { locale } = useI18n()
     const currentView = ref('cars')
+    const globalMessage = ref({ text: '', type: '' })
 
     const currentLocale = computed(() => locale.value)
 
@@ -55,10 +76,22 @@ export default {
       localStorage.setItem('locale', lang)
     }
 
+    const clearGlobalMessage = () => {
+      globalMessage.value = { text: '', type: '' }
+    }
+    window.showGlobalMessage = (text, type = 'error') => {
+      globalMessage.value = { text, type }
+      setTimeout(() => {
+        globalMessage.value = { text: '', type: '' }
+      }, MESSAGE_DISPLAY_DURATION)
+    }
+
     return {
       currentView,
       currentLocale,
-      setLocale
+      setLocale,
+      globalMessage,
+      clearGlobalMessage
     }
   }
 }

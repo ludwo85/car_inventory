@@ -34,9 +34,21 @@
       <table class="table table-striped">
         <thead>
           <tr>
-            <th>{{ $t('parts.tableHeaders.partName') }}</th>
-            <th>{{ $t('parts.tableHeaders.serialNumber') }}</th>
-            <th>{{ $t('parts.tableHeaders.car') }}</th>
+            <th @click="sortBy('name')" class="sortable" :class="{ 'sorted': sorting.sortBy === 'name' }">
+              {{ $t('parts.tableHeaders.partName') }}
+              <i v-if="sorting.sortBy === 'name'" :class="sorting.sortDirection === 'asc' ? 'fa fa-sort-up' : 'fa fa-sort-down'"></i>
+              <i v-else class="fa fa-sort text-muted"></i>
+            </th>
+            <th @click="sortBy('serialnumber')" class="sortable" :class="{ 'sorted': sorting.sortBy === 'serialnumber' }">
+              {{ $t('parts.tableHeaders.serialNumber') }}
+              <i v-if="sorting.sortBy === 'serialnumber'" :class="sorting.sortDirection === 'asc' ? 'fa fa-sort-up' : 'fa fa-sort-down'"></i>
+              <i v-else class="fa fa-sort text-muted"></i>
+            </th>
+            <th @click="sortBy('car_name')" class="sortable" :class="{ 'sorted': sorting.sortBy === 'car_name' }">
+              {{ $t('parts.tableHeaders.car') }}
+              <i v-if="sorting.sortBy === 'car_name'" :class="sorting.sortDirection === 'asc' ? 'fa fa-sort-up' : 'fa fa-sort-down'"></i>
+              <i v-else class="fa fa-sort text-muted"></i>
+            </th>
             <th>{{ $t('parts.tableHeaders.actions') }}</th>
           </tr>
         </thead>
@@ -147,14 +159,12 @@ import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
 import { translateValidationErrors } from '../utils/validationTranslator'
+import { MAX_SEARCH_LENGTH, MAX_STRING_VIEW_LENGTH, PAGINATION_RANGE, MESSAGE_DISPLAY_DURATION } from '../constants'
 
 export default {
   name: 'PartsView',
   setup() {
     const { t } = useI18n()
-    const PAGINATION_RANGE = 2
-    const MAX_SEARCH_LENGTH = 30
-    const MAX_STRING_VIEW_LENGTH = 40
 
     const parts = ref({ data: [], current_page: 1, last_page: 1 })
     const allCars = ref([])
@@ -165,6 +175,11 @@ export default {
     const filters = reactive({
       search: '',
       car_id: ''
+    })
+
+    const sorting = reactive({
+      sortBy: 'name',
+      sortDirection: 'asc'
     })
 
     const form = reactive({
@@ -178,6 +193,17 @@ export default {
       serialnumber: null,
       car_id: null
     })
+
+    const showMessage = (text, type = 'error') => {
+      if (window.showGlobalMessage) {
+        window.showGlobalMessage(text, type)
+        setTimeout(() => {
+          if (window.showGlobalMessage) {
+            window.showGlobalMessage('', '')
+          }
+        }, MESSAGE_DISPLAY_DURATION)
+      }
+    }
 
     const loadParts = async (page = 1) => {
       try {
@@ -193,11 +219,21 @@ export default {
           params.append('car_id', filters.car_id)
         }
         
+        params.append('sort_by', sorting.sortBy)
+        params.append('sort_direction', sorting.sortDirection)
+        
         const response = await axios.get(`/api/parts?${params}`)
-        parts.value = response.data
+        if (response.data.error) {
+          const key = response.data.message || 'messages.error.retrieveParts'
+          showMessage(t(key), 'error')
+          parts.value = { data: [], current_page: 1, last_page: 1 }
+        } else {
+          parts.value = response.data
+        }
       } catch (error) {
         console.error('Error loading parts:', error)
-        alert('Error loading parts')
+        const key = error.response?.data?.message || 'messages.error.network'
+        showMessage(t(key), 'error')
       }
     }
 
@@ -224,10 +260,12 @@ export default {
       errors.car_id = null
 
       try {
-        if (editingPart.value) {
-          await axios.put(`/api/parts/${editingPart.value.id}`, form)
-        } else {
-          await axios.post('/api/parts', form)
+        const response = editingPart.value
+          ? await axios.put(`/api/parts/${editingPart.value.id}`, form)
+          : await axios.post('/api/parts', form)
+        
+        if (response.data.success && response.data.message) {
+          showMessage(t(response.data.message), 'success')
         }
         
         closeModal()
@@ -247,7 +285,8 @@ export default {
             errors.car_id = validationErrors.car_id
           }
         } else {
-          alert('Error saving part')
+          const key = error.response?.data?.message || 'messages.error.network'
+          showMessage(t(key), 'error')
         }
       }
     }
@@ -255,11 +294,15 @@ export default {
     const deletePart = async (part) => {
       if (confirm(t('parts.deleteConfirm', { name: part.name }))) {
         try {
-          await axios.delete(`/api/parts/${part.id}`)
+          const response = await axios.delete(`/api/parts/${part.id}`)
+          if (response.data.success && response.data.message) {
+            showMessage(t(response.data.message), 'success')
+          }
           loadParts(parts.value.current_page)
         } catch (error) {
           console.error('Error deleting part:', error)
-          alert('Error deleting part')
+          const key = error.response?.data?.message || 'messages.error.network'
+          showMessage(t(key), 'error')
         }
       }
     }
@@ -293,6 +336,16 @@ export default {
       return pages
     }
 
+    const sortBy = (field) => {
+      if (sorting.sortBy === field) {
+        sorting.sortDirection = sorting.sortDirection === 'asc' ? 'desc' : 'asc'
+      } else {
+        sorting.sortBy = field
+        sorting.sortDirection = 'asc'
+      }
+      loadParts(1)
+    }
+
     onMounted(() => {
       loadParts()
       loadCars()
@@ -305,6 +358,7 @@ export default {
       showEditModal,
       editingPart,
       filters,
+      sorting,
       form,
       errors,
       loadParts,
@@ -315,6 +369,7 @@ export default {
       closeModal,
       getPageNumbers,
       truncateText,
+      sortBy,
       MAX_SEARCH_LENGTH
     }
   }

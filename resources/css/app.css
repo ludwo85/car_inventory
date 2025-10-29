@@ -36,3 +36,22 @@
 #languageDropdown {
     margin-top: 5px;
 }
+
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.sortable:hover {
+    background-color: #f8f9fa;
+}
+
+.sorted {
+    background-color: #e9ecef;
+}
+
+.sortable i {
+    margin-left: 5px;
+    font-size: 0.8em;
+}
