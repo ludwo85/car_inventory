@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 
 class PartController extends Controller
 {
+    private const ITEMS_PER_PAGE = 10;
+
     public function index(Request $request): JsonResponse
     {
         $query = Part::with('car');
@@ -32,7 +34,7 @@ class PartController extends Controller
             $query->where('car_id', $request->input('car_id'));
         }
 
-        $parts = $query->orderBy('name')->paginate(10);
+        $parts = $query->orderBy('name')->paginate(self::ITEMS_PER_PAGE);
 
         return response()->json($parts);
     }

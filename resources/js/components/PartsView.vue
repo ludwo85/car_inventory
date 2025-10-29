@@ -119,6 +119,8 @@ import axios from 'axios'
 export default {
   name: 'PartsView',
   setup() {
+    const PAGINATION_RANGE = 2
+
     const parts = ref({ data: [], current_page: 1, last_page: 1 })
     const allCars = ref([])
     const showAddModal = ref(false)
@@ -214,8 +216,8 @@ export default {
 
     const getPageNumbers = () => {
       const pages = []
-      const start = Math.max(1, parts.value.current_page - 2)
-      const end = Math.min(parts.value.last_page, parts.value.current_page + 2)
+      const start = Math.max(1, parts.value.current_page - PAGINATION_RANGE)
+      const end = Math.min(parts.value.last_page, parts.value.current_page + PAGINATION_RANGE)
       
       for (let i = start; i <= end; i++) {
         pages.push(i)

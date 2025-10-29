@@ -13,6 +13,8 @@ class PartFactory extends Factory
 {
     protected $model = Part::class;
 
+    private const SERIAL_NUMBER_PATTERN = '[A-Z0-9]{10}';
+
     /**
      * @return array<string, mixed>
      */
@@ -36,7 +38,7 @@ class PartFactory extends Factory
                 'Radio',
                 'Battery'
             ]),
-            'serialnumber' => $this->faker->unique()->regexify('[A-Z0-9]{10}'),
+            'serialnumber' => $this->faker->unique()->regexify(self::SERIAL_NUMBER_PATTERN),
             'car_id' => Car::factory(),
         ];
     }
