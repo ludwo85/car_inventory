@@ -58,21 +58,27 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="car in cars.data" :key="car.id">
-            <td :title="car.name">{{ truncateText(car.name) }}</td>
+          <tr v-for="car in cars.data" :key="car.id" :class="{ 'table-danger': car.deleted_at }">
+            <td :title="car.name">
+              {{ truncateText(car.name) }}
+              <span v-if="car.deleted_at" class="badge bg-danger ms-2">{{ $t('common.deleted') }}</span>
+            </td>
             <td>{{ car.registration_number || '-' }}</td>
             <td>
               <span class="badge" :class="car.is_registered ? 'bg-success' : 'bg-secondary'">
                 {{ car.is_registered ? $t('common.yes') : $t('common.no') }}
               </span>
             </td>
-            <td>{{ car.parts_count || (car.parts ? car.parts.length : 0) }}</td>
+            <td>{{ !car.deleted_at ? (car.parts_count || 0) : '-' }}</td>
             <td>
-              <button class="btn btn-sm btn-outline-primary me-2" @click="editCar(car)">
+              <button v-if="!car.deleted_at" class="btn btn-sm btn-outline-primary me-2" @click="editCar(car)">
                 {{ $t('common.edit') }}
               </button>
-              <button class="btn btn-sm btn-outline-danger" @click="deleteCar(car)">
+              <button v-if="!car.deleted_at" class="btn btn-sm btn-outline-danger me-2" @click="deleteCar(car)">
                 {{ $t('common.delete') }}
+              </button>
+              <button v-if="car.deleted_at" class="btn btn-sm btn-outline-success" @click="restoreCar(car)">
+                {{ $t('common.restore') }}
               </button>
             </td>
           </tr>
@@ -297,6 +303,20 @@ export default {
       }
     }
 
+    const restoreCar = async (car) => {
+      try {
+        const response = await axios.post(`/api/cars/${car.id}/restore`)
+        if (response.data.success && response.data.message) {
+          showMessage(t(response.data.message), 'success')
+        }
+        loadCars(cars.value.current_page)
+      } catch (error) {
+        console.error('Error restoring car:', error)
+        const key = error.response?.data?.message || 'messages.error.network'
+        showMessage(t(key), 'error')
+      }
+    }
+
     const closeModal = () => {
       showAddModal.value = false
       showEditModal.value = false
@@ -352,6 +372,7 @@ export default {
       editCar,
       saveCar,
       deleteCar,
+      restoreCar,
       closeModal,
       getPageNumbers,
       truncateText,

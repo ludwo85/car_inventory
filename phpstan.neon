@@ -5,3 +5,5 @@ parameters:
         - routes
         - database
         - tests
+includes:
+    - ./vendor/nunomaduro/larastan/extension.neon

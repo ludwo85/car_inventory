@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePartRequest;
 use App\Http\Requests\UpdatePartRequest;
 use App\Models\Part;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -17,16 +19,22 @@ class PartController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Part::with('car');
+            /** @var \Illuminate\Database\Eloquent\Builder<\App\Models\Part> $query */
+            $query = Part::withTrashed()->with(['car' => function ($query): void {
+                /** @var \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Car, \App\Models\Part> $query */
+                $query->withTrashed();
+            }]);
 
             if ($request->has('search') && $request->input('search')) {
                 $search = $request->input('search');
                 if (is_string($search)) {
-                    $query->where(function ($q) use ($search) {
+                    $query->where(function (Builder $q) use ($search) {
                         $q->where('name', 'like', "%{$search}%")
                           ->orWhere('serialnumber', 'like', "%{$search}%")
-                          ->orWhereHas('car', function ($carQuery) use ($search) {
-                              $carQuery->where('name', 'like', "%{$search}%");
+                          ->orWhereHas('car', function (Builder $carQuery) use ($search) {
+                              $carQuery
+                                ->withoutGlobalScope(SoftDeletingScope::class)
+                                ->where('name', 'like', "%{$search}%");
                           });
                     });
                 }
@@ -76,7 +84,10 @@ class PartController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'messages.success.partCreated',
-                'data' => $part->load('car'),
+                'data' => $part->load(['car' => function ($query) {
+                    /** @var \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Car, \App\Models\Part> $query */
+                    $query->withTrashed();
+                }]),
             ], Response::HTTP_CREATED);
         } catch (\Exception $e) {
             return response()->json([
@@ -91,7 +102,10 @@ class PartController extends Controller
         try {
             return response()->json([
                 'success' => true,
-                'data' => $part->load('car'),
+                'data' => $part->load(['car' => function ($query) {
+                    /** @var \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Car, \App\Models\Part> $query */
+                    $query->withTrashed();
+                }]),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -110,7 +124,10 @@ class PartController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'messages.success.partUpdated',
-                'data' => $part->load('car'),
+                'data' => $part->load(['car' => function ($query) {
+                    /** @var \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Car, \App\Models\Part> $query */
+                    $query->withTrashed();
+                }]),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -132,6 +149,43 @@ class PartController extends Controller
             return response()->json([
                 'error' => true,
                 'message' => 'messages.error.deletePart',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function restore(int $id): JsonResponse
+    {
+        try {
+            /** @var Part|null $part */
+            $part = Part::withTrashed()->find($id);
+
+            if (!$part) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'messages.error.partNotFound',
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            if (!$part->trashed()) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'messages.error.partNotDeleted',
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $part->restore();
+            return response()->json([
+                'success' => true,
+                'message' => 'messages.success.partRestored',
+                'data' => $part->load(['car' => function ($query) {
+                    /** @var \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Car, \App\Models\Part> $query */
+                    $query->withTrashed();
+                }]),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => 'messages.error.restorePart',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

@@ -13,6 +13,7 @@ return new class () extends Migration {
             $table->string('registration_number')->nullable();
             $table->boolean('is_registered')->default(false);
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index('name', 'cars_name_index');
             $table->index('is_registered', 'cars_is_registered_index');

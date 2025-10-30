@@ -374,7 +374,9 @@ class CarControllerTest extends TestCase
                 'message' => 'messages.success.carDeleted',
             ]);
 
-        $this->assertDatabaseMissing('cars', ['id' => $car->id]);
+        $this->assertSoftDeleted('cars', [
+            'id' => $car->id,
+        ]);
     }
 
     public function test_deleting_car_cascades_to_parts(): void
@@ -388,9 +390,15 @@ class CarControllerTest extends TestCase
 
         $this->deleteJson("/api/cars/{$car->id}");
 
-        $this->assertDatabaseMissing('cars', ['id' => $car->id]);
-        $this->assertDatabaseMissing('parts', ['id' => $part1->id]);
-        $this->assertDatabaseMissing('parts', ['id' => $part2->id]);
+        $this->assertSoftDeleted('cars', [
+            'id' => $car->id,
+        ]);
+        $this->assertSoftDeleted('parts', [
+            'id' => $part1->id,
+        ]);
+        $this->assertSoftDeleted('parts', [
+            'id' => $part2->id,
+        ]);
     }
 
     public function test_pagination_works_correctly(): void

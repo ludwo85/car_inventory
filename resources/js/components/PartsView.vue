@@ -53,16 +53,29 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="part in parts.data" :key="part.id">
-            <td :title="part.name">{{ truncateText(part.name) }}</td>
+          <tr v-for="part in parts.data" :key="part.id" 
+              :class="{ 
+                'table-danger': part.deleted_at, 
+                'table-warning': !part.deleted_at && part.car?.deleted_at 
+              }">
+            <td :title="part.name">
+              {{ truncateText(part.name) }}
+              <span v-if="part.deleted_at" class="badge bg-danger ms-2">{{ $t('common.deleted') }}</span>
+            </td>
             <td :title="part.serialnumber">{{ truncateText(part.serialnumber) }}</td>
-            <td :title="part.car?.name">{{ truncateText(part.car?.name) }}</td>
+            <td :title="part.car?.name">
+              {{ truncateText(part.car?.name || '-') }}
+              <span v-if="part.car?.deleted_at" class="badge bg-danger ms-2">{{ $t('common.carDeleted') }}</span>
+            </td>
             <td>
-              <button class="btn btn-sm btn-outline-primary me-2" @click="editPart(part)">
+              <button v-if="!part.deleted_at" class="btn btn-sm btn-outline-primary me-2" @click="editPart(part)">
                 {{ $t('common.edit') }}
               </button>
-              <button class="btn btn-sm btn-outline-danger" @click="deletePart(part)">
+              <button v-if="!part.deleted_at" class="btn btn-sm btn-outline-danger me-2" @click="deletePart(part)">
                 {{ $t('common.delete') }}
+              </button>
+              <button v-if="part.deleted_at && part.car && !part.car.deleted_at" class="btn btn-sm btn-outline-success" @click="restorePart(part)">
+                {{ $t('common.restore') }}
               </button>
             </td>
           </tr>
@@ -307,6 +320,20 @@ export default {
       }
     }
 
+    const restorePart = async (part) => {
+      try {
+        const response = await axios.post(`/api/parts/${part.id}/restore`)
+        if (response.data.success && response.data.message) {
+          showMessage(t(response.data.message), 'success')
+        }
+        loadParts(parts.value.current_page)
+      } catch (error) {
+        console.error('Error restoring part:', error)
+        const key = error.response?.data?.message || 'messages.error.network'
+        showMessage(t(key), 'error')
+      }
+    }
+
     const closeModal = () => {
       showAddModal.value = false
       showEditModal.value = false
@@ -366,6 +393,7 @@ export default {
       editPart,
       savePart,
       deletePart,
+      restorePart,
       closeModal,
       getPageNumbers,
       truncateText,

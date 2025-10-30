@@ -440,7 +440,9 @@ class PartControllerTest extends TestCase
                 'message' => 'messages.success.partDeleted',
             ]);
 
-        $this->assertDatabaseMissing('parts', ['id' => $part->id]);
+        $this->assertSoftDeleted('parts', [
+            'id' => $part->id,
+        ]);
     }
 
     public function test_deleting_part_does_not_delete_car(): void
@@ -452,8 +454,11 @@ class PartControllerTest extends TestCase
 
         $this->deleteJson("/api/parts/{$part->id}");
 
-        $this->assertDatabaseMissing('parts', ['id' => $part->id]);
-        $this->assertDatabaseHas('cars', ['id' => $car->id]);
+        $this->assertSoftDeleted('parts', [
+            'id' => $part->id,
+        ]);
+        $car->refresh();
+        $this->assertNull($car->deleted_at);
     }
 
     public function test_pagination_works_correctly(): void

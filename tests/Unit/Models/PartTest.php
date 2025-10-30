@@ -93,8 +93,8 @@ class PartTest extends TestCase
 
         $car->delete();
 
-        $this->assertDatabaseMissing('cars', ['id' => $car->id]);
-        $this->assertDatabaseMissing('parts', ['id' => $part1->id]);
-        $this->assertDatabaseMissing('parts', ['id' => $part2->id]);
+        $this->assertSoftDeleted('cars', ['id' => $car->id]);
+        $this->assertSoftDeleted('parts', ['id' => $part1->id]);
+        $this->assertSoftDeleted('parts', ['id' => $part2->id]);
     }
 }

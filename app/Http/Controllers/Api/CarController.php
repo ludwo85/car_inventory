@@ -17,7 +17,17 @@ class CarController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Car::with('parts');
+
+            /** @var \Illuminate\Database\Eloquent\Builder<\App\Models\Car> $query */
+            $query = Car::withTrashed()
+            ->with(['parts' => function ($query): void {
+                /** @var \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Part, \App\Models\Car> $query */
+                $query->withTrashed();
+            }])
+            ->withCount(['parts' => function ($query): void {
+                /** @var \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Part, \App\Models\Car> $query */
+                $query->withoutTrashed();
+            }]);
 
             if ($request->has('search') && $request->input('search')) {
                 $search = $request->input('search');
@@ -41,7 +51,7 @@ class CarController extends Controller
             $allowedSortFields = ['name', 'registration_number', 'is_registered', 'created_at', 'parts_count'];
             if (in_array($sortBy, $allowedSortFields)) {
                 if ($sortBy === 'parts_count') {
-                    $query->withCount('parts')->orderBy('parts_count', $sortDirection);
+                    $query->orderBy('parts_count', $sortDirection);
                 } else {
                     $query->orderBy($sortBy, $sortDirection);
                 }
@@ -63,7 +73,8 @@ class CarController extends Controller
     public function all(): JsonResponse
     {
         try {
-            $cars = Car::orderBy('name')->get();
+            /** @var \Illuminate\Database\Eloquent\Collection<int, Car> $cars */
+            $cars = Car::withTrashed()->orderBy('name')->get();
             return response()->json($cars);
         } catch (\Exception $e) {
             return response()->json([
@@ -97,7 +108,10 @@ class CarController extends Controller
         try {
             return response()->json([
                 'success' => true,
-                'data' => $car->load('parts'),
+                'data' => $car->load(['parts' => function ($query) {
+                    /** @var \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Part, \App\Models\Car> $query */
+                    $query->withTrashed();
+                }]),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -116,7 +130,10 @@ class CarController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'messages.success.carUpdated',
-                'data' => $car->load('parts'),
+                'data' => $car->load(['parts' => function ($query) {
+                    /** @var \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Part, \App\Models\Car> $query */
+                    $query->withTrashed();
+                }]),
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -138,6 +155,43 @@ class CarController extends Controller
             return response()->json([
                 'error' => true,
                 'message' => 'messages.error.deleteCar',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public function restore(int $id): JsonResponse
+    {
+        try {
+            /** @var Car|null $car */
+            $car = Car::withTrashed()->find($id);
+
+            if (!$car) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'messages.error.carNotFound',
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            if (!$car->trashed()) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'messages.error.carNotDeleted',
+                ], Response::HTTP_BAD_REQUEST);
+            }
+
+            $car->restore();
+            return response()->json([
+                'success' => true,
+                'message' => 'messages.success.carRestored',
+                'data' => $car->load(['parts' => function ($query) {
+                    /** @var \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Part, \App\Models\Car> $query */
+                    $query->withTrashed();
+                }]),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => 'messages.error.restoreCar',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
